@@ -1,0 +1,80 @@
+
+variable up_value index 0.8 1 1.2
+
+label loop
+
+units           metal
+dimension       3
+boundary        p p s
+atom_style      atomic
+
+neighbor        2.0 bin
+neigh_modify    delay 0 every 1 check yes
+
+processors * * 1
+
+read_data       ${readfile}
+
+
+variable zlo_data equal zlo
+variable zhi_data equal zhi
+variable lz_data  equal lz
+variable zlo0 equal ${zlo_data}
+variable zhi0 equal ${zhi_data}
+variable lz0  equal ${lz_data}
+
+pair_style      eam/alloy
+pair_coeff      * * ${potfile} Hf Nb Ta Ti Zr
+
+timestep        0.001
+
+
+compute voro    all voronoi/atom
+compute mytemp all temp/com
+compute stress  all stress/atom NULL virial
+compute ke      all ke/atom
+
+# Bin along z (dz = 10 Ang)
+compute chunk   all chunk/atom bin/1d z lower 10 units box
+
+thermo          1000
+thermo_style    custom step atoms temp etotal pe ke press lx ly lz
+thermo_modify flush yes lost warn norm yes temp mytemp
+
+
+reset_timestep  0
+
+# Up in Angstrom/ps (metal units): 1 km/s = 10 Angstrom/ps
+variable Up equal ${up_value}*10.0
+
+# Piston starts at the original -z face and moves in +z at constant Up.
+fix piston all wall/piston zlo pos ${zlo0} vel ${Up} units box
+
+fix 1 all nve
+
+
+dump 1 all custom 1000 dump_${runid}_shock_up${up_value}kms.trj id type x y z c_stress[1] c_stress[2] c_stress[3]
+dump_modify 1 sort id
+
+fix 6 all ave/chunk 10 10 100 chunk temp c_stress[1] c_stress[2] c_voro[1] c_stress[3] vz density/mass file profile_${runid}_shock_up${up_value}kms.txt
+
+
+run             10000
+
+
+unfix           piston
+
+
+run             30000
+
+
+unfix 1
+unfix 6
+undump 1
+
+print "Simulation completed for up_value=${up_value}, runid=${runid}"
+
+clear
+
+next up_value
+jump SELF loop

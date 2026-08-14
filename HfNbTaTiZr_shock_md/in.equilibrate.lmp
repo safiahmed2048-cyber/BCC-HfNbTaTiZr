@@ -1,0 +1,51 @@
+units           metal
+dimension       3
+boundary        p p p
+atom_style      atomic
+
+neighbor        2.0 bin
+neigh_modify    delay 0 every 1 check yes
+
+# ---------- read structure (from Atomsk) ------------------------------------
+read_data       ${datafile}
+
+# ---------- potential: Wu 2026 EAM/alloy, quinary HfNbTaTiZr ---------------
+pair_style      eam/alloy
+pair_coeff      * * ${potfile} Hf Nb Ta Ti Zr
+
+timestep        0.001   # 1 fs
+
+thermo_modify   flush yes lost warn norm yes
+
+
+# STAGE A: minimize (3-stage: soft CG -> FIRE -> tight CG polish)
+
+thermo          1000
+thermo_style    custom step atoms temp etotal pe press lx ly lz
+
+min_style       cg
+minimize        1.0e-4 1.0e-6 500 5000
+
+min_style       fire
+min_modify      line quadratic
+minimize        1.0e-8 1.0e-10 10000 100000
+
+min_style       cg
+minimize        1.0e-8 1.0e-10 10000 100000
+
+reset_timestep  0
+print           "=== Stage A complete: 3-stage minimization ==="
+
+
+# STAGE B: equilibrate at target temperature, zero pressure (NPT)
+
+velocity        all create ${Ttarget} 6535254 mom yes rot yes dist gaussian
+
+fix             equil all npt temp ${Ttarget} ${Ttarget} 0.1 iso 0.0 0.0 1.0
+run             40000
+unfix           equil
+
+write_restart   ${runid}_equilibrated.restart
+write_data      ${runid}_equilibrated.data
+
+print           "Stage B complete: ${Ttarget}K NPT equilibration"

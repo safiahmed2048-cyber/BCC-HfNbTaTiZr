@@ -1,0 +1,67 @@
+units           metal
+dimension       3
+boundary        p p p          
+                               
+atom_style      atomic
+
+read_restart    ${restartfile}
+
+pair_style      eam/alloy
+pair_coeff      * * ${potfile} Hf Nb Ta Ti Zr
+
+neighbor        2.0 bin
+neigh_modify    delay 5 every 1 check yes
+
+restart         10000 ${runid}_restart.*.bin
+
+timestep        0.001   # 1 fs
+
+thermo_modify   flush yes lost warn norm yes
+
+#  Stage 1: uniaxial tension along z, x/y barostatted to zero pressure 
+
+variable        lz0_live equal lz
+variable        lz0 equal ${lz0_live}   # frozen constant, safe to reuse later
+
+variable        nsteps_tension equal "round(v_target_strain / v_strain_rate / dt)"
+print           "Tension stage: strain_rate=${strain_rate} /ps, target_strain=${target_strain}"
+print           "  -> ${nsteps_tension} steps (~$(v_nsteps_tension*0.001) ps)"
+
+fix             tension all npt temp ${Ttarget} ${Ttarget} 0.1 &
+                                x 0.0 0.0 1.0 y 0.0 0.0 1.0
+fix             stretch all deform 1 z erate ${strain_rate} remap x
+
+thermo          200
+thermo_style    custom step temp pe pxx pyy pzz lx ly lz
+
+run             ${nsteps_tension}
+
+unfix           stretch
+unfix           tension
+
+variable        lz_final equal lz
+variable        strain_actual equal "(v_lz_final - v_lz0) / v_lz0"
+print           "Target strain: ${target_strain}   Actual strain achieved: ${strain_actual}"
+print           "(If these differ by more than ~0.005, check the thermo log for lz"
+print           "drift before trusting this structure.)"
+
+write_restart   ${runid}_after_tension.restart
+write_data      ${runid}_after_tension.data
+print           "=== Tension stage complete: ${nsteps_tension} steps ==="
+
+#  Stage 2: switch off imposed deformation, full 3D NPT relaxation 
+
+fix             relax all npt temp ${Ttarget} ${Ttarget} 0.1 aniso 0.0 0.0 1.0
+
+thermo          500
+thermo_style    custom step temp pe pxx pyy pzz vol lx ly lz
+run             40000    # 40 ps, matches the source TCR protocol
+
+unfix           relax
+
+write_restart   ${runid}_dislocations.restart
+write_data      ${runid}_dislocations.data
+
+print           " Phase completed: TCR dislocation introduction"
+print           "Restart file: ${runid}_dislocations.restart"
+print           "Data file:    ${runid}_dislocations.data"
