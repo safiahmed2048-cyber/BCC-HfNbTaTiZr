@@ -36,11 +36,7 @@ FONT_SIZE = 12
 
 
 def read_all_blocks(filename):
-    """
-    Parse every timestep block in a fix ave/chunk file.
-    Returns a list of dicts: {"timestep": int, "z": ndarray (Angstrom),
-                               "density_g_cm3": ndarray, "sigma_zz_gpa": ndarray}
-    """
+
     with open(filename, "r") as f:
         lines = f.readlines()
 
@@ -76,7 +72,7 @@ def read_all_blocks(filename):
                 try:
                     z    = float(cols[IDX_Z])
                     voro = float(cols[IDX_VORO])
-                    szz  = -float(cols[IDX_SZZ])     # negate compression positive
+                    szz  = -float(cols[IDX_SZZ])    
                     dens = float(cols[IDX_DENSITY])
                 except ValueError:
                     continue
@@ -108,10 +104,10 @@ def load_file(fname):
     try:
         blocks = read_all_blocks(path)
     except Exception as e:
-        print(f"[WARNING] Could not parse {path}: {e}. Skipping.")
+        print(f" Could not parse {path}: {e}. Skipping.")
         return None
     if not blocks:
-        print(f"[WARNING] No usable data blocks in {path}. Skipping.")
+        print(f" No usable data blocks in {path}. Skipping.")
         return None
     return blocks
 
