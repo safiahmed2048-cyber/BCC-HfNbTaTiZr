@@ -5,12 +5,6 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
 from matplotlib.lines import Line2D
 
-# ========================================================================
-# CONFIG -- edit this section for your run
-# ========================================================================
-
-# Which orientations to process, and in which files to find them.
-# Add / remove up-velocity entries as needed -- order controls legend order.
 FILES_BY_ORIENTATION = {
     "001": [
         "data/profile_pristine_[001]_shock_up0.8kms.txt",
@@ -257,7 +251,7 @@ def plot_orientation(orientation, filenames):
         up = parse_up_from_filename(fname)
         chosen = select_blocks(blocks, fname)
         if not chosen:
-            print(f"[WARNING] No usable/matched timestep blocks in {fname}. Skipping.")
+            print(f" No usable/matched timestep blocks in {fname}. Skipping.")
             continue
 
         color = VELOCITY_COLORS.get(up, DEFAULT_COLOR_CYCLE[k % len(DEFAULT_COLOR_CYCLE)])
@@ -279,7 +273,7 @@ def plot_orientation(orientation, filenames):
             n_plotted += 1
 
     if n_plotted == 0:
-        print(f"[ERROR] Orientation [{orientation}]: no files could be processed. Skipping figure.")
+        print(f"Orientation [{orientation}]: no files could be processed. Skipping figure.")
         plt.close(fig)
         return
 
@@ -501,13 +495,13 @@ def plot_velocity_sweep_with_defect(orientation, pristine_files, defect_files,
 def main():
     style()
     for orientation, filenames in FILES_BY_ORIENTATION.items():
-        print(f"\n--- Orientation [{orientation}] (pristine, velocity sweep) ---")
+        print(f"\n- Orientation [{orientation}] (pristine, velocity sweep)")
         plot_orientation(orientation, filenames)
 
-    print("\n--- [001] defect comparison @ up = 1 km/s (pristine vs 0.002 vs 0.006) ---")
+    print("\n-- [001] defect comparison @ up = 1 km/s (pristine vs 0.002 vs 0.006)")
     plot_defect_comparison("001", DEFECT_COMPARISON_FILES_001, TARGET_STEPS)
 
-    print("\n--- [001] velocity sweep, pristine vs 0.002 defect ---")
+    print("\n-- [001] velocity sweep, pristine vs 0.002 defect")
     plot_velocity_sweep_with_defect("001", FILES_BY_ORIENTATION["001"],
                                      DEFECT_0002_FILES_001, defect_label="0.002")
 
