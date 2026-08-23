@@ -18,8 +18,6 @@ timestep        0.001   # 1 fs
 
 thermo_modify   flush yes lost warn norm yes
 
-#  Stage 1: uniaxial tension along z, x/y barostatted to zero pressure 
-
 variable        lz0_live equal lz
 variable        lz0 equal ${lz0_live}   # frozen constant, safe to reuse later
 
@@ -47,9 +45,7 @@ print           "drift before trusting this structure.)"
 
 write_restart   ${runid}_after_tension.restart
 write_data      ${runid}_after_tension.data
-print           "=== Tension stage complete: ${nsteps_tension} steps ==="
-
-#  Stage 2: switch off imposed deformation, full 3D NPT relaxation 
+print           " Tension stage complete: ${nsteps_tension} steps "
 
 fix             relax all npt temp ${Ttarget} ${Ttarget} 0.1 aniso 0.0 0.0 1.0
 
