@@ -52,8 +52,7 @@ C44_GPA = 63.43
 
 
 def longitudinal_modulus_gpa(orientation):
-    """Direction-dependent longitudinal elastic modulus (GPa) for a cubic
-    lattice."""
+
     if orientation == "001":
         return C11_GPA
     elif orientation == "110":
@@ -141,21 +140,7 @@ DEFAULT_MARKER_CYCLE = ["o", "s", "^", "D", "v"]
 
 
 def read_all_blocks(filename):
-    """
-    Parse every timestep block in a fix ave/chunk file.
 
-    Returns a list of dicts, one per timestep block:
-        {"timestep": int, "z": ndarray,
-         "sigma_xx": ndarray (GPa),   # c_stress[1] / c_voro[1]
-         "sigma_yy": ndarray (GPa),   # c_stress[2] / c_voro[1]
-         "sigma_normal": ndarray (GPa),  # sigma_zz = c_stress[3] / c_voro[1]
-         "P_hydro": ndarray (GPa),    # -(sigma_xx+sigma_yy+sigma_zz)/3
-         "vz": ndarray (km/s), "density_g_cm3": ndarray (g/cm^3)}
-
-    All three stress components are individually divided by the per-chunk
-    Voronoi cell volume (c_voro[1], i.e. C_voro) before anything else is
-    computed from them.
-    """
     with open(filename, "r") as f:
         lines = f.readlines()
 
@@ -205,7 +190,7 @@ def read_all_blocks(filename):
                 # divide EACH stress component by C_voro (c_voro[1]) first
                 sigma_xx = -STRESS_BAR_TO_GPA * sxx / voro
                 sigma_yy = -STRESS_BAR_TO_GPA * syy / voro
-                sigma_zz = -STRESS_BAR_TO_GPA * szz / voro   # == sigma_normal, used for spall
+                sigma_zz = -STRESS_BAR_TO_GPA * szz / voro  
                 vz_kms = vz * VZ_TO_KMS
 
                 z_list.append(z)
@@ -275,10 +260,6 @@ def lookup_manual_us(orientation, up):
     return None
 
 
-# ========================================================================
-# FREE-SURFACE VELOCITY -> u_max / u_pullback -> spall strength
-# ========================================================================
-
 def resample_uniform(times, values, dt=None):
     if dt is None:
         dt = RESAMPLE_DT_PS
@@ -339,8 +320,7 @@ def find_umax_and_pullback(times, vz_free):
 
 
 def compute_rho0_from_blocks(blocks, window_ps=None):
-    """Mean density/mass over UNDISTURBED chunks (ahead of the shock
-    front) within the first window_ps of the file. Unchanged from before."""
+
     if window_ps is None:
         window_ps = RHO0_AVERAGE_WINDOW_PS
     if not blocks:
@@ -381,17 +361,7 @@ def compute_rho0_from_blocks(blocks, window_ps=None):
 
 
 def compute_shocked_state(blocks, time_ps=None, chunk_id_lo=None, chunk_id_hi=None):
-    """
-    Mean Hugoniot pressure (P_hydro, GPa) and mean density (g/cm^3) over a
-    FIXED chunk-index window (chunk_id_lo <= Chunk <= chunk_id_hi, using
-    the "Chunk" column as printed in the file, 1 = first/near-impact-face
-    bin), read from the SINGLE timestep block whose time (relative to this
-    file's own t=0) is closest to `time_ps` -- i.e. just that one snapshot,
-    not an average over a time window.
 
-    Returns (P_actual_GPa, rho_shocked_g_cm3, n_blocks_used, n_values_used)
-    or (None, None, 0, 0) if no usable data was found.
-    """
     if time_ps is None:
         time_ps = PSTATE_TIME_PS
     if chunk_id_lo is None:
@@ -419,9 +389,7 @@ def compute_shocked_state(blocks, time_ps=None, chunk_id_lo=None, chunk_id_hi=No
 
 
 def compute_spall_strength(u_max, u_pullback, c_l_km_s, rho0_g_cm3):
-    """sigma_spall from sigma_zz (the normal / propagation-axis stress),
-    i.e. the free-surface pull-back method with sigma_zz as the relevant
-    stress component."""
+
     delta_u = u_max - u_pullback                  # km/s
     rho0 = rho0_g_cm3 * 1000.0                      # g/cm^3 -> kg/m^3
     c_l = c_l_km_s * 1000.0                         # km/s -> m/s
@@ -431,9 +399,7 @@ def compute_spall_strength(u_max, u_pullback, c_l_km_s, rho0_g_cm3):
 
 
 def compute_theoretical_pressure(rho0_g_cm3, us_km_s, up_km_s):
-    """Rankine-Hugoniot momentum-jump pressure P = rho0 * Us * up, using
-    the user-supplied Us (MANUAL_US_KM_S), NOT any Us extracted from the
-    profile file."""
+
     if rho0_g_cm3 is None or us_km_s is None or up_km_s is None:
         return None
     rho0_kg_m3 = rho0_g_cm3 * 1000.0
@@ -490,8 +456,7 @@ def _pre_reflection_mask(times, positions):
 
 
 def compute_shock_velocity_two_point(times, positions, t1=None, t2=None):
-    """Diagnostic-only: two-point Us from the front-position trace. NOT
-    used in any plot or in P_theory -- see MANUAL_US_KM_S."""
+
     if t1 is None:
         t1 = US_TWO_POINT_T1_PS
     if t2 is None:
@@ -512,8 +477,7 @@ def compute_shock_velocity_two_point(times, positions, t1=None, t2=None):
 
 
 def compute_shock_velocity_fit(times, positions):
-    """Diagnostic-only regression-fit Us. NOT used in any plot or in
-    P_theory -- see MANUAL_US_KM_S."""
+
     if len(times) < 2:
         return None
     if US_FIT_TIME_RANGE_PS is not None:
@@ -772,7 +736,7 @@ def plot_pressure_vs_up(results):
                      markeredgewidth=0.8, label=f"[{orientation}]")
             n_plotted += 1
         else:
-            print(f"[WARNING] Orientation [{orientation}]: no P_actual_GPa values to plot.")
+            print(f" Orientation [{orientation}]: no P_actual_GPa values to plot.")
 
         if ups_t:
             ax.plot(ups_t, vals_t, "--", lw=1.6, color=color, marker=marker,
@@ -780,7 +744,7 @@ def plot_pressure_vs_up(results):
                      markeredgewidth=1.2, label=f"Theoretical[{orientation}]")
 
     if n_plotted == 0:
-        print(f"[ERROR] No orientations had usable pressure data. Skipping {PRESSURE_UP_FIGURE}.")
+        print(f"No orientations had usable pressure data. Skipping {PRESSURE_UP_FIGURE}.")
         plt.close(fig)
         return
 
@@ -808,7 +772,7 @@ def plot_pressure_vs_VV0(results):
         pts = [(r["V_V0"], r["P_actual_GPa"]) for r in rows
                if r["V_V0"] is not None and r["P_actual_GPa"] is not None]
         if not pts:
-            print(f"[WARNING] Orientation [{orientation}]: no V/V0 - P_actual pairs to plot.")
+            print(f"Orientation [{orientation}]: no V/V0 - P_actual pairs to plot.")
             continue
         pts.sort(key=lambda t: t[0])
         vv0, p = zip(*pts)
@@ -819,7 +783,7 @@ def plot_pressure_vs_VV0(results):
         n_plotted += 1
 
     if n_plotted == 0:
-        print(f"[ERROR] No orientations had usable V/V0 data. Skipping {PRESSURE_VV0_FIGURE}.")
+        print(f" No orientations had usable V/V0 data. Skipping {PRESSURE_VV0_FIGURE}.")
         plt.close(fig)
         return
 
@@ -866,7 +830,7 @@ def plot_free_surface_diagnostics():
             n_plotted += 1
 
         if n_plotted == 0:
-            print(f"[ERROR] Orientation [{orientation}]: no files could be processed. Skipping figure.")
+            print(f" Orientation [{orientation}]: no files could be processed. Skipping figure.")
             plt.close(fig)
             continue
 
