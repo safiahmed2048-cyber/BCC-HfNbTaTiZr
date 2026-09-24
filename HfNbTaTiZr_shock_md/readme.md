@@ -1,3 +1,4 @@
+<img width="942" height="339" alt="mat" src="https://github.com/user-attachments/assets/b1a4077b-5769-4922-a244-76bc9e1cfd8c" />
 # HfNbTaTiZr shock MD — input scripts and post-processing
 
 LAMMPS input files and Python post-processing scripts used for the MD shock
